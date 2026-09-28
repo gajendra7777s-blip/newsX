@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>NewsX</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --bg1: #070a12;
+    --bg2: #0d1220;
+    --bg3: #121a2e;
+    --panel: rgba(255,255,255,0.045);
+    --panel-border: rgba(140,160,220,0.16);
+    --text: #eef1fb;
+    --text-dim: #8993ad;
+    --accent: #4f7dfb;
+    --accent2: #7c5cff;
+    --like: #ff4d6d;
+    --save: #ffb84f;
+    --radius: 20px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg1);
+    color: var(--text);
+  }
+  button, input { font-family: inherit; }
+  .hidden { display: none !important; }
+  a { color: inherit; }
+
+  /* ================= AUTH SCREEN (full page, works for both layouts) ================= */
+  #authScreen {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 30px;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(79,125,251,0.16), transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(124,92,255,0.14), transparent 45%),
+      linear-gradient(160deg, var(--bg1), var(--bg2) 60%, var(--bg3));
+  }
+  .auth-logo { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; color: var(--text); }
+  .auth-logo span { color: var(--accent); }
+  .auth-tagline { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 26px; text-align: center; }
+  .auth-card {
+    width: 100%; max-width: 360px; background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: var(--radius); padding: 28px 24px;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .auth-field { margin-bottom: 14px; }
+  .auth-field label { display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 500; }
+  .auth-field input {
+    width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--panel-border);
+    background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.95rem; outline: none;
+    transition: border-color .15s ease;
+  }
+  .auth-field input:focus { border-color: var(--accent); }
+  .auth-submit {
+    width: 100%; padding: 13px; border-radius: 12px; border: none; margin-top: 6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(79,125,251,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .auth-submit:active { transform: translateY(2px); box-shadow: 0 4px 12px rgba(79,125,251,0.35); }
+  .auth-error { color: var(--like); font-size: 0.8rem; margin-top: 10px; text-align: center; min-height: 1em; }
+  .auth-switch { text-align: center; margin-top: 20px; font-size: 0.85rem; color: var(--text-dim); }
+  .auth-switch a { color: var(--accent); text-decoration: none; font-weight: 600; cursor: pointer; }
+
+  /* ================================================================
+     MOBILE APP — full-bleed reels feed (shown by default, < 860px)
+     ================================================================ */
+  #mobileApp { display: block; }
+
+  .device {
+    position: relative; width: 100%; height: 100dvh; overflow: hidden; background: var(--bg1);
+  }
+  .header-overlay {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 30;
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 40px;
+    background: linear-gradient(to bottom, rgba(4,6,12,0.85) 10%, transparent 100%);
+    pointer-events: none;
+  }
+  .header-row { display: flex; align-items: center; justify-content: space-between; pointer-events: auto; }
+  .logo { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+  .logo span { color: var(--accent); }
+  .cats { display: flex; gap: 8px; overflow-x: auto; margin-top: 12px; scrollbar-width: none; pointer-events: auto; }
+  .cats::-webkit-scrollbar { display: none; }
+  .cat-chip {
+    flex-shrink: 0; padding: 6px 14px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #cfd4e6;
+    cursor: pointer; text-transform: capitalize; transition: all .15s ease; backdrop-filter: blur(6px);
+  }
+  .cat-chip.active { background: var(--accent); color: white; border-color: transparent; }
+
+  .reel-container {
+    position: absolute; inset: 0; overflow-y: scroll; scroll-snap-type: y mandatory;
+    scroll-behavior: smooth; scrollbar-width: none;
+  }
+  .reel-container::-webkit-scrollbar { display: none; }
+  .reel-card {
+    position: relative; width: 100%; height: 100%; scroll-snap-align: start; scroll-snap-stop: always;
+    display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; background: #0d1220;
+  }
+  .reel-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .reel-scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(6,8,16,0.15) 0%, rgba(6,8,16,0.15) 30%, rgba(5,6,12,0.96) 88%);
+  }
+  .reel-content { position: relative; z-index: 2; padding: 0 90px 34px 20px; }
+  .reel-source { font-size: 0.72rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
+  .reel-title { font-size: 1.18rem; font-weight: 700; line-height: 1.35; margin: 8px 0 8px; }
+  .reel-summary { font-size: 0.88rem; color: #c7cce0; line-height: 1.55; max-height: 5.6em; overflow-y: auto; }
+  .reel-link { display: inline-block; margin-top: 10px; font-size: 0.8rem; font-weight: 600; color: var(--accent); text-decoration: none; }
+
+  .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:100%; text-align:center; color: var(--text-dim); padding: 20px; }
+  .empty-state .big { font-size: 3rem; margin-bottom: 10px; }
+  .loading { display:flex; align-items:center; justify-content:center; height:100%; color: var(--text-dim); }
+
+  .action-rail {
+    position: absolute; right: 12px; bottom: 110px; z-index: 5;
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+  }
+  .rail-btn {
+    width: 50px; height: 50px; border-radius: 16px; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 1.35rem;
+    background: linear-gradient(145deg, #232c45, #141a2c);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.45), 0 2px 0 rgba(255,255,255,0.06) inset, 0 -3px 6px rgba(0,0,0,0.4) inset;
+    color: #cfd4e6; transition: transform .1s ease, box-shadow .1s ease;
+  }
+  .rail-btn:active { transform: translateY(3px) scale(0.94); box-shadow: 0 3px 8px rgba(0,0,0,0.4), 0 -2px 4px rgba(0,0,0,0.3) inset; }
+  .rail-btn.liked { color: var(--like); background: linear-gradient(145deg, #3a1c28, #201018); }
+  .rail-btn.saved { color: var(--save); background: linear-gradient(145deg, #3a2c14, #201808); }
+  .rail-count { font-size: 0.68rem; color: var(--text-dim); margin-top: -12px; font-weight: 600; text-align: center; }
+  .rail-avatar {
+    width: 50px; height: 50px; border-radius: 50%; font-size: 1.3rem;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    background: #141a2c; border: 2px solid var(--accent);
+    box-shadow: 0 10px 20px rgba(79,125,251,0.35), 0 2px 0 rgba(255,255,255,0.1) inset;
+  }
+  .scroll-hint { position: absolute; left: 0; right: 0; bottom: 18px; z-index: 5; display: flex; justify-content: center; pointer-events: none; }
+  .scroll-btn {
+    pointer-events: auto; width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
+    background: linear-gradient(145deg, #2a3352, #171e33); color: #a9bcff;
+    display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4), 0 2px 0 rgba(255,255,255,0.08) inset;
+    animation: bob 1.6s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+  /* mobile profile overlay */
+  #mobileProfilePage {
+    position: absolute; inset: 0; z-index: 40; overflow-y: auto;
+    background: linear-gradient(160deg, var(--bg1), var(--bg3));
+    padding: calc(env(safe-area-inset-top,0px) + 16px) 18px 30px; display: none;
+  }
+  .back-btn {
+    width: 38px; height: 38px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--panel-border); color: var(--text); font-size: 1.1rem;
+  }
+
+  /* ================================================================
+     PROFILE CONTENT (shared HTML, used inside both layouts)
+     ================================================================ */
+  .profile-header { display: flex; flex-direction: column; align-items: center; padding: 18px 0 8px; }
+  .profile-avatar {
+    width: 88px; height: 88px; border-radius: 50%; font-size: 2.3rem;
+    display: flex; align-items: center; justify-content: center;
+    background: #141a2c; border: 3px solid var(--accent);
+    box-shadow: 0 14px 30px rgba(79,125,251,0.35);
+  }
+  .profile-username { font-weight: 700; font-size: 1.15rem; margin-top: 12px; }
+  .profile-stats { display: flex; gap: 20px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+  .profile-stat { text-align: center; background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px; padding: 10px 16px; min-width: 68px; }
+  .profile-stat .num { font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+  .profile-stat .lbl { font-size: 0.68rem; color: var(--text-dim); margin-top: 2px; }
+  .community-card { margin-top: 22px; background: var(--panel); border: 1px solid var(--panel-border); border-radius: 16px; padding: 16px 18px; font-size: 0.85rem; color: var(--text-dim); }
+  .community-card .title { font-weight: 700; color: var(--text); font-size: 0.9rem; margin-bottom: 8px; }
+  .community-card .row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .community-card .row b { color: var(--text); }
+  .logout-btn { display: block; margin: 20px auto 0; padding: 9px 22px; border-radius: 10px; border: 1px solid rgba(255,77,109,0.4); background: rgba(255,77,109,0.1); color: var(--like); font-weight: 600; font-size: 0.82rem; cursor: pointer; }
+  .grid-label { font-size: 0.76rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; margin: 24px 0 10px; font-weight: 700; }
+  .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .grid-tile { aspect-ratio: 1; border-radius: 10px; overflow: hidden; position: relative; background: #141a2c; cursor: pointer; transition: transform .15s ease; }
+  .grid-tile:hover { transform: translateY(-3px) scale(1.03); }
+  .grid-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .grid-tile .no-img { display:flex; align-items:center; justify-content:center; height:100%; font-size: 0.62rem; color: var(--text-dim); padding: 6px; text-align:center; }
+
+  /* ================================================================
+     DESKTOP APP — full dashboard website (>= 860px)
+     ================================================================ */
+  #desktopApp { display: none; }
+
+  .dtopbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 24px;
+    padding: 16px 32px; border-bottom: 1px solid var(--panel-border);
+    background: rgba(7,10,18,0.9); backdrop-filter: blur(10px);
+  }
+  .dlogo { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; flex-shrink: 0; }
+  .dlogo span { color: var(--accent); }
+  .dsearch-wrap { position: relative; max-width: 380px; flex: 1; }
+  .dsearch {
+    width: 100%; padding: 9px 14px 9px 36px; border-radius: 10px; border: 1px solid var(--panel-border);
+    background: var(--panel); color: var(--text); font-size: 0.86rem; outline: none;
+  }
+  .dsearch:focus { border-color: var(--accent); }
+  .dsearch-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.85rem; }
+  .dtabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dtab {
+    padding: 7px 15px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--panel-border); color: #cfd4e6; text-transform: capitalize;
+  }
+  .dtab.active { background: linear-gradient(90deg, var(--accent), var(--accent2)); color: white; border-color: transparent; }
+  .dtop-avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    background: #141a2c; border: 2px solid var(--accent);
+    margin-left: auto;
+  }
+
+  .dbody { max-width: 1400px; margin: 0 auto; padding: 24px 32px 60px; display: grid; grid-template-columns: 200px 1fr 280px; gap: 28px; align-items: start; }
+
+  .dsidebar { display: flex; flex-direction: column; gap: 3px; position: sticky; top: 90px; }
+  .dnav-btn {
+    display: flex; align-items: center; gap: 11px; padding: 11px 14px; border-radius: 12px; border: none;
+    background: transparent; color: var(--text-dim); font-weight: 600; font-size: 0.88rem; cursor: pointer; text-align: left;
+  }
+  .dnav-btn .icon { font-size: 1.15rem; width: 20px; text-align: center; }
+  .dnav-btn.active { background: var(--panel); color: var(--text); box-shadow: inset 3px 0 0 var(--accent); }
+  .dnav-btn:hover { color: var(--text); }
+
+  .dmain-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 16px; }
+  .dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+  .dcard {
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 16px; overflow: hidden;
+    cursor: pointer; transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .dcard:hover { transform: translateY(-4px); box-shadow: 0 18px 34px rgba(0,0,0,0.45); }
+  .dcard-img { width: 100%; height: 148px; object-fit: cover; display: block; background: #141a2c; }
+  .dcard-body { padding: 13px 15px; }
+  .dcard-source { font-size: 0.68rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .dcard-title {
+    font-size: 0.92rem; font-weight: 700; margin: 7px 0; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2;line-clamp:2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.5em;
+  }
+  .dcard-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+  .dcard-time { font-size: 0.7rem; color: var(--text-dim); }
+  .dcard-actions { display: flex; gap: 12px; }
+  .dcard-actions button { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.95rem; padding: 2px; }
+  .dcard-actions button.liked { color: var(--like); }
+  .dcard-actions button.saved { color: var(--save); }
+  .dcard-likecount { font-size: 0.68rem; color: var(--text-dim); margin-left: 3px; }
+
+  .dside { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 90px; }
+  .dside-card { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 16px; padding: 16px 18px; }
+  .dside-card .title { font-weight: 700; font-size: 0.92rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .dtrend-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+  .dtrend-item:last-child { border-bottom: none; }
+  .dtrend-item img { width: 50px; height: 50px; border-radius: 9px; object-fit: cover; flex-shrink: 0; background: #141a2c; }
+  .dtrend-title { font-size: 0.78rem; font-weight: 600; line-height: 1.3; }
+  .dtrend-meta { font-size: 0.68rem; color: var(--text-dim); margin-top: 3px; }
+  .dside-empty { font-size: 0.8rem; color: var(--text-dim); text-align: center; padding: 10px 0; }
+
+  .dprofile-wrap { max-width: 640px; }
+
+  @media (min-width: 860px) {
+    #mobileApp { display: none; }
+    #desktopApp { display: block; }
+  }
+  @media (max-width: 1140px) {
+    .dbody { grid-template-columns: 180px 1fr; }
+    .dside { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="authScreen">
+  <div class="auth-logo">📱 News<span>X</span></div>
+  <div class="auth-tagline">Your daily news, condensed by AI.</div>
+  <div class="auth-card">
+    <form id="authForm" onsubmit="return submitAuth(event)">
+      <div class="auth-field">
+        <label>Username</label>
+        <input type="text" id="authUsername" autocomplete="username" required>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="authPassword" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="auth-submit" id="authSubmitBtn">Log In</button>
+      <div class="auth-error" id="authError"></div>
+    </form>
+    <div class="auth-switch" id="authSwitch">
+      Don't have an account? <a onclick="toggleAuthMode()">Sign up</a>
+    </div>
+  </div>
+</div>
+
+<div id="mainApp" class="hidden">
+
+  <!-- ============ MOBILE: reels feed ============ -->
+  <div id="mobileApp">
+    <div class="device">
+      <div class="header-overlay">
+        <div class="header-row"><div class="logo">News<span>X</span></div></div>
+        <div class="cats" id="cats"></div>
+      </div>
+      <div class="reel-container" id="reelContainer"><div class="loading">Loading news…</div></div>
+      <div id="mobileProfilePage"></div>
+    </div>
+  </div>
+
+  <!-- ============ DESKTOP: dashboard ============ -->
+  <div id="desktopApp">
+    <div class="dtopbar">
+      <div class="dlogo">News<span>X</span></div>
+      <div class="dsearch-wrap">
+        <span class="dsearch-icon">🔍</span>
+        <input class="dsearch" id="dsearchInput" placeholder="Search news, topics..." oninput="onDesktopSearch()">
+      </div>
+      <div class="dtabs" id="dtabs"></div>
+      <div class="dtop-avatar" id="dTopAvatar" onclick="setDashView('profile')">🙂</div>
+    </div>
+
+    <div class="dbody">
+      <div class="dsidebar" id="dsidebar"></div>
+      <div id="dmainContent"><div class="loading">Loading news…</div></div>
+      <div class="dside" id="dsideTrending"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CATS = ["general","technology","business","sports","entertainment","health","science"];
+let currentCategory = "general";
+let articles = [];
+let currentUser = null;
+let authMode = "login";
+let scrollDebounce = null;
+let currentIdx = 0;
+let dashView = "home"; // home | trending | saved | profile
+let dashSearchTerm = "";
+let dashSavedCache = null;
+
+/* ---------------- AUTH ---------------- */
+
+function toggleAuthMode() {
+  authMode = authMode === "login" ? "signup" : "login";
+  document.getElementById('authSubmitBtn').textContent = authMode === "login" ? "Log In" : "Sign Up";
+  document.getElementById('authSwitch').innerHTML = authMode === "login"
+    ? `Don't have an account? <a onclick="toggleAuthMode()">Sign up</a>`
+    : `Already have an account? <a onclick="toggleAuthMode()">Log in</a>`;
+  document.getElementById('authError').textContent = '';
+}
+
+async function submitAuth(e) {
+  e.preventDefault();
+  const username = document.getElementById('authUsername').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  const endpoint = authMode === "login" ? '/api/login' : '/api/register';
+  try {
+    const res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username, password}) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Something went wrong'; return false; }
+    currentUser = data;
+    enterApp();
+  } catch (err) {
+    errEl.textContent = 'Could not reach the server.';
+  }
+  return false;
+}
+
+async function checkSession() {
+  try {
+    const res = await fetch('/api/me');
+    if (res.ok) { currentUser = await res.json(); enterApp(); return; }
+  } catch (e) {}
+  document.getElementById('authScreen').classList.remove('hidden');
+}
+
+function enterApp() {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('dTopAvatar').textContent = currentUser.avatar_emoji || '🙂';
+  renderCats();
+  renderDesktopTabs();
+  renderDesktopSidebar();
+  loadFeed();
+}
+
+async function logout() {
+  await fetch('/api/logout', { method: 'POST' });
+  currentUser = null;
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('authUsername').value = '';
+  document.getElementById('authPassword').value = '';
+}
+
+/* ---------------- SHARED FEED LOADING ---------------- */
+
+function renderCats() {
+  const el = document.getElementById('cats');
+  el.innerHTML = CATS.map(c => `<div class="cat-chip ${c===currentCategory?'active':''}" onclick="switchCategory('${c}')">${c}</div>`).join('');
+}
+
+function renderDesktopTabs() {
+  const el = document.getElementById('dtabs');
+  el.innerHTML = CATS.map(c => `<div class="dtab ${c===currentCategory?'active':''}" onclick="switchCategory('${c}')">${c === 'general' ? 'For You' : c}</div>`).join('');
+}
+
+function switchCategory(c) {
+  currentCategory = c;
+  renderCats();
+  renderDesktopTabs();
+  loadFeed();
+}
+
+async function loadFeed() {
+  document.getElementById('reelContainer').innerHTML = '<div class="loading">Loading news…</div>';
+  document.getElementById('dmainContent').innerHTML = '<div class="loading">Loading news…</div>';
+  try {
+    const res = await fetch(`/api/feed?category=${currentCategory}`);
+    if (res.status === 401) { return logout(); }
+    articles = await res.json();
+  } catch (e) {
+    articles = [];
+  }
+  renderReels();
+  if (dashView === 'home' || dashView === 'trending') renderDashboardMain();
+}
+
+/* ================= MOBILE REELS ================= */
+
+function renderReels() {
+  const container = document.getElementById('reelContainer');
+  currentIdx = 0;
+  if (!articles.length) {
+    container.innerHTML = `<div class="empty-state"><div class="big">📭</div><div>No stories in this category right now.<br>Try another one.</div></div>`;
+    return;
+  }
+  container.innerHTML = articles.map((a, i) => `
+    <div class="reel-card" data-idx="${i}">
+      ${a.image_url ? `<img class="reel-img" src="${a.image_url}" onerror="this.style.display='none'">` : ''}
+      <div class="reel-scrim"></div>
+      <div class="reel-content">
+        <div class="reel-source">${a.source || 'News'}</div>
+        <div class="reel-title">${a.title}</div>
+        <div class="reel-summary">${a.summary || ''}</div>
+        ${a.url ? `<a class="reel-link" href="${a.url}" target="_blank" rel="noopener">Read full story ↗</a>` : ''}
+      </div>
+      <div class="action-rail">
+        <div class="rail-avatar" onclick="showMobileProfile()">${currentUser ? currentUser.avatar_emoji : '🙂'}</div>
+        <div>
+          <button class="rail-btn ${a.liked ? 'liked' : ''}" onclick="toggleLike(${i}, this)">♥</button>
+          <div class="rail-count">${a.like_count || 0}</div>
+        </div>
+        <button class="rail-btn ${a.bookmarked ? 'saved' : ''}" onclick="toggleSave(${i}, this)">🔖</button>
+      </div>
+      <div class="scroll-hint"><button class="scroll-btn" onclick="scrollToIndex(${i + 1})">⌄</button></div>
+    </div>
+  `).join('');
+
+  const c = document.getElementById('reelContainer');
+  c.removeEventListener('scroll', onReelScroll);
+  c.addEventListener('scroll', onReelScroll);
+  logSeen(0);
+}
+
+function scrollToIndex(idx) {
+  const container = document.getElementById('reelContainer');
+  const target = container.querySelector(`.reel-card[data-idx="${idx}"]`);
+  if (target) target.scrollIntoView({ behavior: 'smooth' });
+}
+
+function onReelScroll(e) {
+  clearTimeout(scrollDebounce);
+  scrollDebounce = setTimeout(() => {
+    const idx = Math.round(e.target.scrollTop / e.target.clientHeight);
+    currentIdx = idx;
+    logSeen(idx);
+  }, 200);
+}
+
+const seenLogged = new Set();
+function logSeen(idx) {
+  const a = articles[idx];
+  if (!a || seenLogged.has(a.id)) return;
+  seenLogged.add(a.id);
+  fetch('/api/skip', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({article_id: a.id}) }).catch(()=>{});
+}
+
+async function toggleLike(idx, btn) {
+  const a = articles[idx];
+  a.liked = !a.liked;
+  a.like_count = (a.like_count || 0) + (a.liked ? 1 : -1);
+  if (btn) {
+    btn.classList.toggle('liked', a.liked);
+    const countEl = btn.closest('.action-rail') ? btn.parentElement.querySelector('.rail-count') : null;
+    if (countEl) countEl.textContent = a.like_count;
+  }
+  syncDesktopCardFor(a.id);
+  try {
+    await fetch('/api/like', { method: a.liked ? 'POST' : 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({article_id: a.id}) });
+  } catch (e) {}
+}
+
+async function toggleSave(idx, btn) {
+  const a = articles[idx];
+  a.bookmarked = !a.bookmarked;
+  if (btn) btn.classList.toggle('saved', a.bookmarked);
+  dashSavedCache = null;
+  syncDesktopCardFor(a.id);
+  try {
+    await fetch('/api/bookmark', { method: a.bookmarked ? 'POST' : 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({article_id: a.id}) });
+  } catch (e) {}
+}
+
+function syncDesktopCardFor(articleId) {
+  const a = articles.find(x => x.id === articleId);
+  if (!a) return;
+  const card = document.querySelector(`.dcard[data-id="${articleId}"]`);
+  if (!card) return;
+  const likeBtn = card.querySelector('.like-btn');
+  const saveBtn = card.querySelector('.save-btn');
+  const countEl = card.querySelector('.dcard-likecount');
+  if (likeBtn) likeBtn.classList.toggle('liked', !!a.liked);
+  if (saveBtn) saveBtn.classList.toggle('saved', !!a.bookmarked);
+  if (countEl) countEl.textContent = a.like_count || 0;
+}
+
+function showMobileProfile() {
+  document.getElementById('mobileProfilePage').style.display = 'block';
+  loadProfileInto('mobileProfilePage', true);
+}
+function hideMobileProfile() {
+  document.getElementById('mobileProfilePage').style.display = 'none';
+}
+
+/* ================= DESKTOP DASHBOARD ================= */
+
+function renderDesktopSidebar() {
+  const items = [
+    { id: 'home', icon: '🏠', label: 'Home' },
+    { id: 'trending', icon: '📈', label: 'Trending' },
+    { id: 'saved', icon: '🔖', label: 'Saved' },
+    { id: 'profile', icon: '👤', label: 'Profile' },
+  ];
+  document.getElementById('dsidebar').innerHTML = items.map(it => `
+    <button class="dnav-btn ${dashView === it.id ? 'active' : ''}" data-view="${it.id}" onclick="setDashView('${it.id}')">
+      <span class="icon">${it.icon}</span>${it.label}
+    </button>
+  `).join('');
+}
+
+function setDashView(view) {
+  dashView = view;
+  document.querySelectorAll('.dnav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  renderDashboardMain();
+}
+
+function onDesktopSearch() {
+  dashSearchTerm = document.getElementById('dsearchInput').value.trim().toLowerCase();
+  renderDashboardMain();
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (isNaN(then)) return '';
+  const mins = Math.max(1, Math.round((Date.now() - then) / 60000));
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
+
+function cardHtml(a) {
+  return `
+    <div class="dcard" data-id="${a.id}" onclick="window.open('${a.url}','_blank')">
+      ${a.image_url ? `<img class="dcard-img" src="${a.image_url}" onerror="this.style.display='none'">` : `<div class="dcard-img"></div>`}
+      <div class="dcard-body">
+        <div class="dcard-source">${a.source || 'News'}</div>
+        <div class="dcard-title">${a.title}</div>
+        <div class="dcard-meta">
+          <span class="dcard-time">${timeAgo(a.published_at)}</span>
+          <span class="dcard-actions">
+            <button class="like-btn ${a.liked ? 'liked' : ''}" onclick="event.stopPropagation(); desktopCardLike('${a.id}', this)">♥</button>
+            <span class="dcard-likecount">${a.like_count || 0}</span>
+            <button class="save-btn ${a.bookmarked ? 'saved' : ''}" onclick="event.stopPropagation(); desktopCardSave('${a.id}', this)">🔖</button>
+          </span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function desktopCardLike(articleId, btn) {
+  const idx = articles.findIndex(a => a.id === articleId);
+  if (idx === -1) return;
+  toggleLike(idx, null);
+  btn.classList.toggle('liked', articles[idx].liked);
+  btn.parentElement.querySelector('.dcard-likecount').textContent = articles[idx].like_count || 0;
+}
+
+function desktopCardSave(articleId, btn) {
+  const idx = articles.findIndex(a => a.id === articleId);
+  if (idx === -1) return;
+  toggleSave(idx, null);
+  btn.classList.toggle('saved', articles[idx].bookmarked);
+}
+
+async function renderDashboardMain() {
+  const main = document.getElementById('dmainContent');
+  const trendSide = document.getElementById('dsideTrending');
+
+  if (dashView === 'profile') {
+    trendSide.innerHTML = '';
+    main.innerHTML = '<div class="loading">Loading profile…</div>';
+    await loadProfileInto('dmainContent', false);
+    return;
+  }
+
+  renderTrendingSidebar();
+
+  if (dashView === 'saved') {
+    main.innerHTML = '<div class="dmain-title">🔖 Saved Stories</div><div class="loading">Loading…</div>';
+    if (!dashSavedCache) {
+      try { const res = await fetch('/api/bookmarks'); dashSavedCache = await res.json(); } catch (e) { dashSavedCache = []; }
+    }
+    main.innerHTML = `<div class="dmain-title">🔖 Saved Stories</div>` + (
+      dashSavedCache.length
+        ? `<div class="dgrid">${dashSavedCache.map(cardHtml).join('')}</div>`
+        : `<div class="dside-empty">No saved stories yet — click the bookmark icon on any story to save it.</div>`
+    );
+    return;
+  }
+
+  let list = articles;
+  if (dashSearchTerm) {
+    list = list.filter(a => (a.title + ' ' + (a.summary||'')).toLowerCase().includes(dashSearchTerm));
+  }
+  if (dashView === 'trending') {
+    list = [...list].sort((a, b) => (b.like_count||0) - (a.like_count||0));
+  }
+
+  const title = dashView === 'trending' ? '📈 Trending Now' : '🏠 Top Stories';
+  main.innerHTML = `<div class="dmain-title">${title}</div>` + (
+    list.length ? `<div class="dgrid">${list.map(cardHtml).join('')}</div>`
+                : `<div class="dside-empty">No stories match right now.</div>`
+  );
+}
+
+function renderTrendingSidebar() {
+  const trendSide = document.getElementById('dsideTrending');
+  const top = [...articles].sort((a, b) => (b.like_count||0) - (a.like_count||0)).slice(0, 5);
+  trendSide.innerHTML = `
+    <div class="dside-card">
+      <div class="title">📈 Trending Now</div>
+      ${top.length ? top.map(a => `
+        <div class="dtrend-item" onclick="window.open('${a.url}','_blank')">
+          ${a.image_url ? `<img src="${a.image_url}" onerror="this.style.display='none'">` : ''}
+          <div>
+            <div class="dtrend-title">${a.title.slice(0, 60)}</div>
+            <div class="dtrend-meta">♥ ${a.like_count || 0} · ${a.source || ''}</div>
+          </div>
+        </div>
+      `).join('') : `<div class="dside-empty">No trending stories yet</div>`}
+    </div>
+  `;
+}
+
+/* ================= SHARED PROFILE CONTENT ================= */
+
+async function loadProfileInto(targetId, withBackButton) {
+  const el = document.getElementById(targetId);
+  const [statsRes, bmsRes, commRes] = await Promise.all([
+    fetch('/api/stats'), fetch('/api/bookmarks'), fetch('/api/community-stats')
+  ]);
+  const stats = await statsRes.json();
+  const bms = await bmsRes.json();
+  const comm = await commRes.json();
+  dashSavedCache = bms;
+
+  const gridHtml = bms.length
+    ? bms.map(a => `
+        <div class="grid-tile" title="${a.title.replace(/"/g,'&quot;')}" onclick="window.open('${a.url}','_blank')">
+          ${a.image_url ? `<img src="${a.image_url}" onerror="this.parentElement.innerHTML='<div class=no-img>${a.title.slice(0,40).replace(/'/g,"&#39;")}</div>'">` : `<div class="no-img">${a.title.slice(0,40)}</div>`}
+        </div>
+      `).join('')
+    : `<div style="grid-column: 1/-1; text-align:center; color:var(--text-dim); padding: 30px 0;">No saved stories yet</div>`;
+
+  el.innerHTML = `
+    <div class="dprofile-wrap">
+      ${withBackButton ? `<button class="back-btn" onclick="hideMobileProfile()">←</button>` : ''}
+      <div class="profile-header">
+        <div class="profile-avatar">${currentUser.avatar_emoji || '🙂'}</div>
+        <div class="profile-username">@${currentUser.username}</div>
+        <div class="profile-stats">
+          <div class="profile-stat"><div class="num">${stats.total_bookmarks}</div><div class="lbl">Saved</div></div>
+          <div class="profile-stat"><div class="num">${stats.total_likes}</div><div class="lbl">Liked</div></div>
+          <div class="profile-stat"><div class="num">${stats.total_seen}</div><div class="lbl">Read</div></div>
+        </div>
+      </div>
+      <div class="community-card">
+        <div class="title">🌍 NewsX Community</div>
+        <div class="row"><span>Total users</span><b>${comm.total_users}</b></div>
+        <div class="row"><span>Active today</span><b>${comm.active_today}</b></div>
+        <div class="row"><span>Stories saved (all users)</span><b>${comm.total_saves}</b></div>
+        <div class="row"><span>Stories liked (all users)</span><b>${comm.total_likes}</b></div>
+      </div>
+      <div class="grid-label">Your Saved Stories</div>
+      <div class="profile-grid">${gridHtml}</div>
+      <button class="logout-btn" onclick="logout()">Log Out</button>
+    </div>
+  `;
+}
+
+checkSession();
+</script>
+</body>
+</html> 
